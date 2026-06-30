@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>建筑规范查询对比工具</title>
+    <style>
+        :root {
+            --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --text-secondary: #86868b;
+            --accent: #0071e3; --accent-hover: #0077ed; --success: #34c759; --error: #ff3b30;
+            --warning: #ff9f0a; --border: rgba(0,0,0,0.06); --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --radius: 16px; --radius-sm: 10px;
+            --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+        .header {
+            background: rgba(255,255,255,0.72); backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 0.5px solid rgba(0,0,0,0.1); padding: 0 32px; height: 56px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .logo {
+            width: 36px; height: 36px; background: linear-gradient(135deg, #0071e3, #64d2ff);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,113,227,0.3);
+        }
+        .logo svg { width: 20px; height: 20px; }
+        .header-title { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+        .header-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .lib-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(0,113,227,0.08); color: var(--accent);
+            padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+        }
+        .lib-badge .dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 8px 20px; border: none; border-radius: 980px;
+            font-size: 14px; font-weight: 500; font-family: var(--font);
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+            letter-spacing: -0.1px;
+        }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 4px rgba(0,113,227,0.3); }
+        .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 2px 8px rgba(0,113,227,0.4); transform: scale(1.01); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-secondary { background: rgba(0,0,0,0.04); color: var(--text); }
+        .btn-secondary:hover { background: rgba(0,0,0,0.08); }
+        .btn-ghost { background: transparent; color: var(--accent); padding: 6px 14px; }
+        .btn-ghost:hover { background: rgba(0,113,227,0.06); }
+        .btn-sm { padding: 5px 14px; font-size: 12px; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+        .container { max-width: 1360px; margin: 0 auto; padding: 24px 32px 40px; }
+
+        .input-section {
+            background: var(--card); border-radius: var(--radius); padding: 24px;
+            margin-bottom: 20px; box-shadow: var(--shadow); border: 0.5px solid var(--border);
+        }
+        .section-label {
+            font-size: 13px; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+        }
+        textarea {
+            width: 100%; height: 150px; border: 1px solid rgba(0,0,0,0.1);
+            border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14px;
+            font-family: var(--font); resize: vertical; line-height: 1.7;
+            transition: all 0.25s; color: var(--text); background: #fafafa;
+        }
+        textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,113,227,0.12); background: #fff; }
+        textarea::placeholder { color: #c7c7cc; }
+        .btn-group { display: flex; gap: 10px; margin-top: 16px; }
+
+        .result-section {
+            background: var(--card); border-radius: var(--radius); padding: 24px;
+            box-shadow: var(--shadow); border: 0.5px solid var(--border); margin-bottom: 20px;
+        }
+        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .result-header h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+        .result-actions { display: flex; align-items: center; gap: 12px; }
+        .stats { font-size: 13px; color: var(--text-secondary); }
+
+        .table-wrapper { overflow-x: auto; border-radius: var(--radius-sm); border: 0.5px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            background: #fafafa; padding: 12px 14px; text-align: center;
+            font-weight: 600; font-size: 12px; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.3px;
+            border-bottom: 0.5px solid var(--border); white-space: nowrap;
+            cursor: pointer; user-select: none;
+        }
+        thead th:hover { color: var(--accent); }
+        thead th .sort-arrow { font-size: 10px; margin-left: 2px; opacity: 0.4; }
+        thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+        tbody td {
+            padding: 8px 10px; text-align: center;
+            border-bottom: 0.5px solid rgba(0,0,0,0.04); vertical-align: middle;
+        }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: rgba(0,113,227,0.03); }
+        tbody tr:last-child td { border-bottom: none; }
+        .text-left { text-align: left; }
+
+        .edit-input {
+            width: 100%; border: 1px solid transparent; background: transparent;
+            padding: 4px 8px; border-radius: 6px; font-size: 13px; font-family: var(--font);
+            color: var(--text); transition: all 0.15s; text-align: inherit;
+        }
+        .edit-input:hover { background: rgba(0,0,0,0.03); }
+        .edit-input:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 2px rgba(0,113,227,0.1); }
+        .edit-name { min-width: 160px; }
+        .edit-code { min-width: 120px; }
+
+        .copyable {
+            cursor: pointer; color: var(--accent);
+            border-bottom: 1px dashed rgba(0,113,227,0.3); transition: all 0.15s; padding-bottom: 1px;
+        }
+        .copyable:hover { color: var(--accent-hover); border-bottom-color: var(--accent-hover); }
+
+        .tag {
+            display: inline-flex; align-items: center; padding: 3px 10px;
+            border-radius: 980px; font-size: 12px; font-weight: 500;
+        }
+        .tag-success { background: rgba(52,199,89,0.12); color: #248a3d; }
+        .tag-error { background: rgba(255,59,48,0.12); color: #d70015; }
+        .tag-warning { background: rgba(255,159,10,0.12); color: #c77800; }
+        .tag-default { background: rgba(0,0,0,0.05); color: var(--text-secondary); }
+        .tag-info { background: rgba(0,113,227,0.12); color: #0071e3; }
+
+        tr.row-replacement { background: rgba(0,113,227,0.04); }
+        tr.row-replacement:hover { background: rgba(0,113,227,0.08); }
+        tr.row-feizhi { background: rgba(255,59,48,0.03); }
+        tr.row-feizhi:hover { background: rgba(255,59,48,0.06); }
+        tr.row-strike td { text-decoration: line-through; color: var(--text-secondary); opacity: 0.6; }
+
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+        .empty-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+        .empty-desc { font-size: 14px; color: var(--text-secondary); }
+
+        .toast {
+            position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: var(--text); color: #fff; padding: 10px 24px; border-radius: 980px;
+            font-size: 14px; font-weight: 500; z-index: 1000; opacity: 0;
+            transition: all 0.35s cubic-bezier(0.4,0,0.2,1); pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.error { background: var(--error); }
+
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .fade-in { animation: fadeInUp 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+        .row-num { color: var(--text-secondary); font-size: 12px; font-weight: 500; }
+
+        .del-btn {
+            width: 24px; height: 24px; border: none; background: transparent;
+            color: var(--text-secondary); cursor: pointer; border-radius: 6px;
+            font-size: 16px; line-height: 1; transition: all 0.15s;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .del-btn:hover { background: rgba(255,59,48,0.1); color: var(--error); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+            z-index: 200; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: var(--card); border-radius: var(--radius); padding: 32px;
+            width: 360px; box-shadow: var(--shadow); text-align: center;
+        }
+        .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+        .modal p { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+        .modal input[type="password"] {
+            width: 100%; padding: 10px 14px; border: 1px solid rgba(0,0,0,0.12);
+            border-radius: var(--radius-sm); font-size: 14px; font-family: var(--font);
+            margin-bottom: 16px; text-align: center; letter-spacing: 2px;
+        }
+        .modal input[type="password"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,113,227,0.12); }
+        .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
+        .copy-menu {
+            position: absolute; top: 100%; right: 0; margin-top: 6px;
+            background: var(--card); border-radius: 12px; padding: 6px 0;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12); border: 0.5px solid var(--border);
+            min-width: 160px; z-index: 50; display: none;
+        }
+        .copy-menu.active { display: block; }
+        .copy-menu-item {
+            padding: 8px 16px; font-size: 13px; cursor: pointer;
+            transition: background 0.15s; color: var(--text);
+        }
+        .copy-menu-item:hover { background: rgba(0,113,227,0.06); color: var(--accent); }
+
+        /* 规范库浏览区域 */
+        .lib-section {
+            background: var(--card); border-radius: var(--radius); padding: 24px;
+            box-shadow: var(--shadow); border: 0.5px solid var(--border);
+        }
+        .lib-section.hidden { display: none; }
+        .lib-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .lib-header h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+        .lib-filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .lib-search {
+            border: 1px solid rgba(0,0,0,0.1); border-radius: 980px; padding: 6px 14px 6px 32px;
+            font-size: 13px; font-family: var(--font); width: 260px; background: #fafafa;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10.5' cy='10.5' r='7'/%3E%3Cline x1='15.5' y1='15.5' x2='21' y2='21'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: 12px center;
+            transition: all 0.25s;
+        }
+        .lib-search:focus { outline: none; border-color: var(--accent); background-color: #fff; box-shadow: 0 0 0 3px rgba(0,113,227,0.12); }
+        .lib-select {
+            border: 1px solid rgba(0,0,0,0.1); border-radius: 980px; padding: 6px 14px;
+            font-size: 13px; font-family: var(--font); background: #fafafa; cursor: pointer;
+            transition: all 0.25s;
+        }
+        .lib-select:focus { outline: none; border-color: var(--accent); }
+        .lib-stats { font-size: 13px; color: var(--text-secondary); }
+        .lib-table-wrapper { overflow: auto; max-height: 600px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); }
+        .lib-table-wrapper thead th { position: sticky; top: 0; z-index: 1; }
+
+        /* 收藏面板 */
+        .fav-panel {
+            margin-top: 16px; background: #fafafa; border-radius: var(--radius-sm);
+            border: 1px solid rgba(0,0,0,0.06); overflow: hidden;
+        }
+        .fav-panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 18px; border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .fav-panel-header h3 { font-size: 15px; font-weight: 600; }
+        .fav-panel-actions { display: flex; align-items: center; gap: 8px; }
+        .fav-list { max-height: 320px; overflow-y: auto; }
+        .fav-item-checkbox {
+            width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid rgba(0,0,0,0.15);
+            cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; background: #fff; font-size: 11px; color: #fff;
+        }
+        .fav-item-checkbox.checked { background: var(--accent); border-color: var(--accent); }
+        .fav-batch-bar {
+            display: none; align-items: center; gap: 8px; padding: 8px 18px;
+            background: rgba(0,113,227,0.04); border-top: 1px solid rgba(0,113,227,0.1);
+        }
+        .fav-batch-bar.active { display: flex; }
+        .fav-batch-info { font-size: 12px; color: var(--accent); font-weight: 500; }
+        .fav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 18px; border-bottom: 0.5px solid rgba(0,0,0,0.04);
+            transition: background 0.15s; cursor: pointer;
+        }
+        .fav-item:hover { background: rgba(0,113,227,0.03); }
+        .fav-item:last-child { border-bottom: none; }
+        .fav-item-info { flex: 1; min-width: 0; }
+        .fav-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fav-item-code { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+        .fav-item-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+        .fav-tag {
+            display: inline-flex; align-items: center; gap: 2px;
+            padding: 1px 8px; border-radius: 980px; font-size: 11px; font-weight: 500;
+            background: rgba(0,113,227,0.08); color: var(--accent);
+        }
+        .fav-tag .fav-tag-remove {
+            cursor: pointer; font-size: 13px; line-height: 1; opacity: 0.5;
+            margin-left: 2px;
+        }
+        .fav-tag .fav-tag-remove:hover { opacity: 1; }
+        .fav-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .fav-action-btn {
+            width: 28px; height: 28px; border: none; background: transparent;
+            color: var(--text-secondary); cursor: pointer; border-radius: 6px;
+            font-size: 13px; display: inline-flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .fav-action-btn:hover { background: rgba(0,113,227,0.06); color: var(--accent); }
+        .fav-action-btn.danger:hover { background: rgba(255,59,48,0.08); color: var(--error); }
+        .fav-empty { text-align: center; padding: 32px 20px; color: var(--text-secondary); font-size: 13px; }
+        .fav-add-row {
+            display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid rgba(0,0,0,0.06);
+            background: #fff;
+        }
+        .fav-add-input {
+            flex: 1; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;
+            padding: 6px 10px; font-size: 13px; font-family: var(--font);
+            background: #fff; transition: all 0.15s;
+        }
+        .fav-add-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,113,227,0.1); }
+        .fav-add-input::placeholder { color: #c7c7cc; }
+
+        /* 收藏标签弹窗 */
+        .tag-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+            z-index: 200; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .tag-modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .tag-modal {
+            background: var(--card); border-radius: var(--radius); padding: 28px;
+            width: 400px; max-width: 90vw; box-shadow: var(--shadow); text-align: left;
+        }
+        .tag-modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 4px; text-align: center; }
+        .tag-modal .tag-modal-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; text-align: center; }
+        .tag-modal-item { font-size: 13px; padding: 6px 0; color: var(--text); }
+        .tag-modal-item code { background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .tag-existing { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .tag-existing-item {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; border-radius: 980px; font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.15s; border: 1px solid transparent;
+        }
+        .tag-existing-item.unselected { background: rgba(0,0,0,0.04); color: var(--text-secondary); }
+        .tag-existing-item.selected { background: rgba(0,113,227,0.12); color: var(--accent); border-color: rgba(0,113,227,0.3); }
+        .tag-new-row { display: flex; gap: 8px; margin-top: 8px; }
+        .tag-new-input {
+            flex: 1; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;
+            padding: 6px 10px; font-size: 13px; font-family: var(--font);
+        }
+        .tag-new-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,113,227,0.1); }
+        .tag-modal-btns { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+
+        /* 编辑收藏弹窗 */
+        .edit-fav-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+            z-index: 200; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .edit-fav-overlay.active { opacity: 1; pointer-events: auto; }
+        .edit-fav-modal {
+            background: var(--card); border-radius: var(--radius); padding: 28px;
+            width: 400px; max-width: 90vw; box-shadow: var(--shadow);
+        }
+        .edit-fav-modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+        .edit-fav-field { margin-bottom: 12px; }
+        .edit-fav-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .edit-fav-field input {
+            width: 100%; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;
+            padding: 8px 12px; font-size: 14px; font-family: var(--font);
+        }
+        .edit-fav-field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,113,227,0.1); }
+
+        /* 反馈弹窗 */
+        .feedback-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+            z-index: 200; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .feedback-overlay.active { opacity: 1; pointer-events: auto; }
+        .feedback-modal {
+            background: var(--card); border-radius: var(--radius); padding: 28px;
+            width: 480px; max-width: 90vw; box-shadow: var(--shadow);
+            max-height: 85vh; display: flex; flex-direction: column;
+        }
+        .feedback-modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+        .feedback-tabs { display: flex; gap: 0; margin-bottom: 16px; border-radius: 980px; background: rgba(0,0,0,0.04); padding: 3px; }
+        .feedback-tab {
+            flex: 1; padding: 6px 12px; border: none; background: transparent;
+            font-size: 13px; font-weight: 500; font-family: var(--font);
+            border-radius: 980px; cursor: pointer; transition: all 0.2s; color: var(--text-secondary);
+        }
+        .feedback-tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .feedback-body { flex: 1; overflow-y: auto; }
+        .feedback-form { display: block; }
+        .feedback-form.hidden { display: none; }
+        .feedback-list-wrap { display: none; }
+        .feedback-list-wrap.active { display: block; }
+        .fb-field { margin-bottom: 12px; }
+        .fb-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .fb-field select, .fb-field input, .fb-field textarea {
+            width: 100%; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;
+            padding: 8px 12px; font-size: 14px; font-family: var(--font);
+            background: #fff; transition: all 0.15s;
+        }
+        .fb-field select { cursor: pointer; }
+        .fb-field textarea { min-height: 80px; resize: vertical; line-height: 1.6; }
+        .fb-field input:focus, .fb-field select:focus, .fb-field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,113,227,0.1); }
+        .fb-item {
+            padding: 10px 0; border-bottom: 0.5px solid rgba(0,0,0,0.06);
+        }
+        .fb-item:last-child { border-bottom: none; }
+        .fb-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .fb-item-type { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 980px; }
+        .fb-item-type.missing { background: rgba(255,159,10,0.12); color: #c77800; }
+        .fb-item-type.error { background: rgba(255,59,48,0.12); color: #d70015; }
+        .fb-item-type.suggest { background: rgba(0,113,227,0.12); color: #0071e3; }
+        .fb-item-type.other { background: rgba(0,0,0,0.05); color: var(--text-secondary); }
+        .fb-item-time { font-size: 11px; color: var(--text-secondary); }
+        .fb-item-ref { font-size: 12px; color: var(--accent); margin-bottom: 2px; }
+        .fb-item-content { font-size: 13px; line-height: 1.5; }
+        .fb-item-actions { margin-top: 4px; display: flex; gap: 8px; }
+        .fb-item-actions button { border: none; background: transparent; font-size: 12px; font-family: var(--font); cursor: pointer; color: var(--text-secondary); padding: 2px 6px; border-radius: 4px; }
+        .fb-item-actions button:hover { color: var(--accent); background: rgba(0,113,227,0.06); }
+        .fb-item-actions button.danger:hover { color: var(--error); background: rgba(255,59,48,0.06); }
+        .fb-empty { text-align: center; padding: 24px; color: var(--text-secondary); font-size: 13px; }
+        .fb-footer { display: flex; gap: 8px; justify-content: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.06); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="10.5" cy="10.5" r="7"/>
+                <line x1="15.5" y1="15.5" x2="21" y2="21"/>
+            </svg>
+        </div>
+        <div>
+            <div class="header-title">建筑规范查询对比工具</div>
+            <div class="header-subtitle" id="libStatus">正在加载规范库...</div>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="lib-badge" id="libBadge" style="display:none;">
+            <span class="dot"></span>
+            <span id="libBadgeText"></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="checkCloudUpdate()">检查更新</button>
+        <button class="btn btn-ghost btn-sm" onclick="showFeedbackModal()">反馈</button>
+        <button class="btn btn-ghost btn-sm" onclick="showLoginModal()">更新规范库</button>
+        <input type="file" id="uploadInput" accept=".xlsx,.xls" style="display:none" onchange="uploadExcel(this)">
+    </div>
+</div>
+
+<!-- 密码弹窗 -->
+<div class="modal-overlay" id="loginModal">
+    <div class="modal">
+        <h3>管理员验证</h3>
+        <p>更新规范库需要输入管理员密码</p>
+        <input type="password" id="adminPwd" placeholder="请输入密码" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="modal-btns">
+            <button class="btn btn-secondary btn-sm" onclick="hideLoginModal()">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="doLogin()">确认</button>
+        </div>
+    </div>
+</div>
+
+<!-- 标签管理弹窗 -->
+<div class="tag-modal-overlay" id="tagModal">
+    <div class="tag-modal">
+        <h3>管理标签</h3>
+        <div class="tag-modal-subtitle" id="tagModalSubtitle"></div>
+        <div class="tag-modal-item" id="tagModalItem"></div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.3px;">选择标签</div>
+        <div class="tag-existing" id="tagExistingList"></div>
+        <div class="tag-new-row">
+            <input type="text" class="tag-new-input" id="tagNewInput" placeholder="输入新标签名称" onkeydown="if(event.key==='Enter')addNewTag()">
+            <button class="btn btn-secondary btn-sm" onclick="addNewTag()">添加标签</button>
+        </div>
+        <div class="tag-modal-btns">
+            <button class="btn btn-secondary btn-sm" onclick="hideTagModal()">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="saveTagModal()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑收藏弹窗 -->
+<div class="edit-fav-overlay" id="editFavModal">
+    <div class="edit-fav-modal">
+        <h3>编辑收藏</h3>
+        <div class="edit-fav-field">
+            <label>规范名称</label>
+            <input type="text" id="editFavName">
+        </div>
+        <div class="edit-fav-field">
+            <label>编号</label>
+            <input type="text" id="editFavCode">
+        </div>
+        <div class="tag-modal-btns">
+            <button class="btn btn-secondary btn-sm" onclick="hideEditFavModal()">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="saveEditFav()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 反馈弹窗 -->
+<div class="feedback-overlay" id="feedbackModal">
+    <div class="feedback-modal">
+        <h3>反馈与跟踪</h3>
+        <div class="feedback-tabs">
+            <button class="feedback-tab active" onclick="switchFbTab('submit')">提交反馈</button>
+            <button class="feedback-tab" onclick="switchFbTab('list')">我的反馈</button>
+        </div>
+        <div class="feedback-body">
+            <!-- 提交反馈表单 -->
+            <div class="feedback-form" id="fbFormWrap">
+                <div class="fb-field">
+                    <label>反馈类型</label>
+                    <select id="fbType">
+                        <option value="missing">规范缺失</option>
+                        <option value="error">数据错误</option>
+                        <option value="suggest">功能建议</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                <div class="fb-field">
+                    <label>关联规范名称</label>
+                    <input type="text" id="fbRefName" placeholder="如：建筑防火通用规范（可选）">
+                </div>
+                <div class="fb-field">
+                    <label>关联编号</label>
+                    <input type="text" id="fbRefCode" placeholder="如：GB55037-2022（可选）">
+                </div>
+                <div class="fb-field">
+                    <label>详细描述</label>
+                    <textarea id="fbContent" placeholder="请描述您发现的问题或建议..."></textarea>
+                </div>
+                <div style="text-align:center;">
+                    <button class="btn btn-primary btn-sm" onclick="submitFeedback()">提交反馈</button>
+                </div>
+            </div>
+            <!-- 反馈列表 -->
+            <div class="feedback-list-wrap" id="fbListWrap">
+                <div id="fbList"></div>
+            </div>
+        </div>
+        <div class="fb-footer">
+            <button class="btn btn-secondary btn-sm" onclick="exportFeedback()">导出反馈</button>
+            <button class="btn btn-ghost btn-sm" onclick="hideFeedbackModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="input-section">
+        <div class="section-label">输入规范</div>
+        <textarea id="inputText" placeholder="请输入规范名称和编号，每行一条&#10;&#10;例如：&#10;GB55001-2021 工程结构通用规范&#10;建筑与市政工程抗震通用规范 GB55002-2021&#10;GB/T 50326-2006&#10;民用建筑通用规范"></textarea>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="parseInput()">识别内容</button>
+            <button class="btn btn-primary" id="btnCompare" onclick="doCompare()">查询对比</button>
+            <button class="btn btn-secondary" onclick="clearAll()">清空</button>
+            <button class="btn btn-secondary" onclick="showFavPanel()" id="btnFav">收藏</button>
+        </div>
+
+        <!-- 收藏面板 -->
+        <div class="fav-panel" id="favPanel" style="display:none;">
+            <div class="fav-panel-header">
+                <h3>我的收藏</h3>
+                <div class="fav-panel-actions">
+                    <button class="btn btn-ghost btn-sm" id="btnFavSelectAll" onclick="toggleFavSelectAll()">全选</button>
+                    <select class="lib-select" id="favTagFilter" onchange="renderFavList()">
+                        <option value="">全部标签</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="loadFavByTag(document.getElementById('favTagFilter').value)">按标签查询</button>
+                    <button class="btn btn-ghost btn-sm" onclick="hideFavPanel()">收起</button>
+                </div>
+            </div>
+            <div class="fav-list" id="favList"></div>
+            <div class="fav-batch-bar" id="favBatchBar">
+                <span class="fav-batch-info" id="favBatchInfo">已选 0 项</span>
+                <button class="btn btn-primary btn-sm" onclick="batchAddTag()">批量打标签</button>
+                <button class="btn btn-secondary btn-sm" onclick="batchRemoveTag()">批量移除标签</button>
+                <button class="btn btn-secondary btn-sm" style="color:var(--error);" onclick="batchDeleteFav()">批量删除</button>
+                <button class="btn btn-ghost btn-sm" onclick="clearFavSelection()">取消选择</button>
+            </div>
+            <div class="fav-add-row">
+                <input type="text" class="fav-add-input" id="favAddName" placeholder="规范名称">
+                <input type="text" class="fav-add-input" id="favAddCode" placeholder="编号" style="max-width:160px;">
+                <button class="btn btn-primary btn-sm" onclick="addFavFromInput()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 对比结果区域 -->
+    <div class="result-section" id="resultSection" style="display:none;">
+        <div class="result-header">
+            <h2>对比结果</h2>
+            <div class="result-actions">
+                <span class="stats" id="resultStats"></span>
+                <button class="btn btn-secondary btn-sm" onclick="addRow()" id="btnAddRow" style="display:none;">+ 添加行</button>
+                <div style="position:relative;display:inline-flex;" id="copyBtnWrap">
+                    <button class="btn btn-primary btn-sm" id="btnCopyAll" onclick="toggleCopyMenu()" style="display:none;">复制所有正确规范 ▾</button>
+                    <div class="copy-menu" id="copyMenu">
+                        <div class="copy-menu-item" onclick="copyAllCorrect('code_name')">编号 名称</div>
+                        <div class="copy-menu-item" onclick="copyAllCorrect('name_code')">名称 编号</div>
+                        <div class="copy-menu-item" onclick="copyAllCorrect('book_code')">《名称》编号</div>
+                        <div class="copy-menu-item" onclick="copyAllCorrect('code_book')">编号《名称》</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="btnFavResult" onclick="saveResultToFav()" style="display:none;">收藏结果</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th style="width:36px;">#</th>
+                        <th>输入名称</th>
+                        <th>输入编号</th>
+                        <th>对比名称</th>
+                        <th>对比编号</th>
+                        <th>名称正确性</th>
+                        <th>编号正确性</th>
+                        <th>现行性</th>
+                        <th>执行时间</th>
+                        <th style="width:36px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 规范库浏览区域 -->
+    <div class="lib-section" id="libSection">
+        <div class="lib-header">
+            <h2>规范库</h2>
+            <div class="lib-filters">
+                <input type="text" class="lib-search" id="libSearch" placeholder="搜索名称或编号（多关键词用空格分隔）" oninput="filterLib()">
+                <select class="lib-select" id="libCategory" onchange="filterLib()">
+                    <option value="">全部类型</option>
+                </select>
+                <select class="lib-select" id="libStatusFilter" onchange="filterLib()">
+                    <option value="现行">现行</option>
+                    <option value="">全部状态</option>
+                    <option value="废止">废止</option>
+                    <option value="有误">有误</option>
+                    <option value="简写">简写</option>
+                    <option value="未标注">未标注</option>
+                </select>
+                <span class="lib-stats" id="libStats"></span>
+            </div>
+        </div>
+        <div class="lib-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:44px;" onclick="sortLib('id')">序号 <span class="sort-arrow">↕</span></th>
+                        <th onclick="sortLib('category')">类型 <span class="sort-arrow">↕</span></th>
+                        <th class="text-left" onclick="sortLib('name')">名称 <span class="sort-arrow">↕</span></th>
+                        <th onclick="sortLib('code')">标准编号 <span class="sort-arrow">↕</span></th>
+                        <th onclick="sortLib('status')">状态 <span class="sort-arrow">↕</span></th>
+                        <th onclick="sortLib('impl_date')">实施日期 <span class="sort-arrow">↕</span></th>
+                    </tr>
+                </thead>
+                <tbody id="libBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    var parsedItems = [];
+    var allRecords = [];
+    var filteredRecords = [];
+    var sortField = '';
+    var sortAsc = true;
+
+    loadStatus();
+    loadDatabase();
+
+    function loadStatus() {
+        fetch('/api/status').then(r => r.json()).then(function(data) {
+            document.getElementById('libStatus').textContent =
+                data.filename + ' · ' + data.record_count + ' 条 · v' + data.data_version + ' · ' + data.data_source;
+            document.getElementById('libBadge').style.display = 'inline-flex';
+            document.getElementById('libBadgeText').textContent = 'v' + data.data_version + ' · ' + data.record_count + ' 条';
+        });
+    }
+
+    function loadDatabase() {
+        fetch('/api/database').then(r => r.json()).then(function(data) {
+            allRecords = data.records;
+            // 提取类型选项
+            var cats = {};
+            allRecords.forEach(function(r) { if (r.category) cats[r.category] = true; });
+            var sel = document.getElementById('libCategory');
+            Object.keys(cats).sort().forEach(function(c) {
+                var opt = document.createElement('option');
+                opt.value = c; opt.textContent = c;
+                sel.appendChild(opt);
+            });
+            filterLib();
+        });
+    }
+
+    function filterLib() {
+        var searchRaw = document.getElementById('libSearch').value.trim().toLowerCase();
+        var cat = document.getElementById('libCategory').value;
+        var status = document.getElementById('libStatusFilter').value;
+
+        // 支持多关键词搜索：空格或换行分隔，任一关键词匹配即显示
+        var keywords = [];
+        if (searchRaw) {
+            keywords = searchRaw.split(/[\s\n]+/).filter(function(k) { return k.length > 0; });
+        }
+
+        filteredRecords = allRecords.filter(function(r) {
+            if (status && r.status !== status) return false;
+            if (cat && r.category !== cat) return false;
+            if (keywords.length > 0) {
+                var s = r.name.toLowerCase() + ' ' + r.code.toLowerCase();
+                // 任一关键词匹配即显示
+                var matched = false;
+                for (var i = 0; i < keywords.length; i++) {
+                    if (s.indexOf(keywords[i]) !== -1) { matched = true; break; }
+                }
+                if (!matched) return false;
+            }
+            return true;
+        });
+
+        if (sortField) {
+            filteredRecords.sort(function(a, b) {
+                var va = a[sortField] || '', vb = b[sortField] || '';
+                if (sortField === 'id') { va = parseInt(va); vb = parseInt(vb); }
+                if (va < vb) return sortAsc ? -1 : 1;
+                if (va > vb) return sortAsc ? 1 : -1;
+                return 0;
+            });
+        }
+
+        renderLibTable();
+    }
+
+    function sortLib(field) {
+        if (sortField === field) { sortAsc = !sortAsc; }
+        else { sortField = field; sortAsc = true; }
+        filterLib();
+    }
+
+    function renderLibTable() {
+        var tbody = document.getElementById('libBody');
+        tbody.innerHTML = '';
+        document.getElementById('libStats').textContent = filteredRecords.length + ' / ' + allRecords.length + ' 条';
+
+        var frag = document.createDocumentFragment();
+        filteredRecords.forEach(function(r) {
+            var tr = document.createElement('tr');
+            if (r.strike) tr.classList.add('row-strike');
+            var td;
+
+            td = tr.insertCell(-1);
+            td.textContent = r.id;
+
+            td = tr.insertCell(-1);
+            td.textContent = r.category || '—';
+
+            td = tr.insertCell(-1);
+            td.className = 'text-left';
+            td.textContent = r.name || '—';
+
+            td = tr.insertCell(-1);
+            td.textContent = r.code || '—';
+
+            td = tr.insertCell(-1);
+            var tag = document.createElement('span');
+            var cls = 'tag-default';
+            if (r.status === '现行') cls = 'tag-success';
+            else if (r.status === '废止' || r.status === '有误') cls = 'tag-error';
+            else if (r.status === '简写') cls = 'tag-warning';
+            tag.className = 'tag ' + cls;
+            tag.textContent = r.status || '未标注';
+            td.appendChild(tag);
+
+            td = tr.insertCell(-1);
+            td.style.whiteSpace = 'nowrap';
+            td.textContent = r.impl_date || '—';
+
+            frag.appendChild(tr);
+        });
+        tbody.appendChild(frag);
+    }
+
+    function checkCloudUpdate() {
+        showToast('正在检查更新...');
+        fetch('/api/check_update').then(r => r.json()).then(function(data) {
+            showToast(data.message, !data.updated);
+            if (data.updated) loadStatus();
+        });
+    }
+
+    function parseInput() {
+        var text = document.getElementById('inputText').value.trim();
+        if (!text) { showToast('请先输入规范内容', true); return; }
+        fetch('/api/parse', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: text})
+        }).then(r => r.json()).then(function(data) {
+            parsedItems = data;
+            renderEditable(parsedItems);
+            showToast('已识别 ' + data.length + ' 条规范');
+        }).catch(function(err) {
+            showToast('请求失败：' + err.message, true);
+        });
+    }
+
+    function doCompare() {
+        var btn = document.getElementById('btnCompare');
+        collectEditedItems();
+        if (parsedItems.length === 0) {
+            var text = document.getElementById('inputText').value.trim();
+            if (!text) { showToast('请先输入规范内容', true); return; }
+            btn.disabled = true;
+            btn.textContent = '识别中...';
+            fetch('/api/parse', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text: text})
+            }).then(r => r.json()).then(function(data) {
+                parsedItems = data;
+                doCompareWithItems(btn);
+            }).catch(function(err) {
+                btn.disabled = false;
+                btn.textContent = '查询对比';
+                showToast('请求失败：' + err.message, true);
+            });
+        } else {
+            doCompareWithItems(btn);
+        }
+    }
+
+    function doCompareWithItems(btn) {
+        collectEditedItems();
+        btn.disabled = true;
+        btn.textContent = '查询中...';
+        fetch('/api/compare', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({items: parsedItems})
+        }).then(r => r.json()).then(function(data) {
+            btn.disabled = false;
+            btn.textContent = '查询对比';
+            renderResults(data);
+        }).catch(function(err) {
+            btn.disabled = false;
+            btn.textContent = '查询对比';
+            showToast('请求失败：' + err.message, true);
+        });
+    }
+
+    function collectEditedItems() {
+        var rows = document.querySelectorAll('#resultBody tr');
+        if (rows.length === 0) return;
+        var items = [];
+        rows.forEach(function(tr) {
+            var nameInput = tr.querySelector('.edit-name');
+            var codeInput = tr.querySelector('.edit-code');
+            if (nameInput || codeInput) {
+                items.push({
+                    input_name: nameInput ? nameInput.value : '',
+                    input_code: codeInput ? codeInput.value : ''
+                });
+            }
+        });
+        if (items.length > 0) parsedItems = items;
+    }
+
+    function showResultSection() {
+        document.getElementById('resultSection').style.display = 'block';
+        document.getElementById('libSection').classList.add('hidden');
+    }
+
+    function showLibSection() {
+        document.getElementById('resultSection').style.display = 'none';
+        document.getElementById('libSection').classList.remove('hidden');
+    }
+
+    function renderEditable(items) {
+        showResultSection();
+        var tbody = document.getElementById('resultBody');
+        tbody.innerHTML = '';
+        document.getElementById('btnAddRow').style.display = 'inline-flex';
+        document.getElementById('btnCopyAll').style.display = 'none';
+        document.getElementById('resultStats').textContent = '已识别 ' + items.length + ' 条，可编辑后点击"查询对比"';
+
+        items.forEach(function(item, idx) {
+            var tr = document.createElement('tr');
+            tr.className = 'fade-in';
+            tr.style.animationDelay = (idx * 0.03) + 's';
+            tr.innerHTML =
+                '<td><span class="row-num">' + (idx+1) + '</span></td>' +
+                '<td class="text-left"><input class="edit-input edit-name" value="' + escAttr(item.input_name || '') + '" placeholder="名称"></td>' +
+                '<td><input class="edit-input edit-code" value="' + escAttr(item.input_code || '') + '" placeholder="编号"></td>' +
+                '<td class="text-left" style="color:var(--text-secondary);">—</td>' +
+                '<td style="color:var(--text-secondary);">—</td>' +
+                '<td><span class="tag tag-default">—</span></td>' +
+                '<td><span class="tag tag-default">—</span></td>' +
+                '<td><span class="tag tag-default">—</span></td>' +
+                '<td style="color:var(--text-secondary);">—</td>' +
+                '<td><button class="del-btn" onclick="deleteRow(this)" title="删除">×</button></td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderResults(results) {
+        showResultSection();
+        var tbody = document.getElementById('resultBody');
+        tbody.innerHTML = '';
+        document.getElementById('btnAddRow').style.display = 'inline-flex';
+
+        var correctCount = 0, totalCount = results.length;
+        results.forEach(function(item, idx) {
+            var tr = document.createElement('tr');
+            tr.className = 'fade-in';
+            tr.style.animationDelay = (idx * 0.03) + 's';
+
+            if (item.is_replacement) tr.classList.add('row-replacement');
+            else if (item.status === '废止' || item.status === '有误') tr.classList.add('row-feizhi');
+
+            var td;
+
+            td = tr.insertCell(-1);
+            if (item.is_replacement) {
+                td.innerHTML = '<span class="row-num">' + (idx+1) + '</span><span class="rep-mark" style="display:none"></span>';
+            } else {
+                td.innerHTML = '<span class="row-num">' + (idx+1) + '</span>';
+            }
+
+            td = tr.insertCell(-1);
+            td.className = 'text-left';
+            var nameInput = document.createElement('input');
+            nameInput.className = 'edit-input edit-name';
+            nameInput.value = item.input_name || '';
+            nameInput.placeholder = '名称';
+            td.appendChild(nameInput);
+
+            td = tr.insertCell(-1);
+            var codeInput = document.createElement('input');
+            codeInput.className = 'edit-input edit-code';
+            codeInput.value = item.input_code || '';
+            codeInput.placeholder = '编号';
+            td.appendChild(codeInput);
+
+            td = tr.insertCell(-1);
+            td.className = 'text-left';
+            var nameSpan = document.createElement('span');
+            nameSpan.className = 'copyable';
+            nameSpan.textContent = item.match_name || '—';
+            nameSpan.title = '点击复制';
+            nameSpan.onclick = function() { copyText(this); };
+            td.appendChild(nameSpan);
+
+            td = tr.insertCell(-1);
+            var codeSpan = document.createElement('span');
+            codeSpan.className = 'copyable';
+            codeSpan.textContent = item.match_code || '—';
+            codeSpan.title = '点击复制';
+            codeSpan.onclick = function() { copyText(this); };
+            td.appendChild(codeSpan);
+
+            td = tr.insertCell(-1);
+            var nameTag = document.createElement('span');
+            var nameClass = 'tag-error';
+            if (item.name_correct === '是') nameClass = 'tag-success';
+            else if (item.name_correct === '部分正确') nameClass = 'tag-warning';
+            nameTag.className = 'tag ' + nameClass;
+            nameTag.textContent = item.name_correct;
+            td.appendChild(nameTag);
+
+            td = tr.insertCell(-1);
+            var codeTag = document.createElement('span');
+            codeTag.className = 'tag ' + (item.code_correct === '是' ? 'tag-success' : 'tag-error');
+            codeTag.textContent = item.code_correct;
+            td.appendChild(codeTag);
+
+            td = tr.insertCell(-1);
+            var statusTag = document.createElement('span');
+            var statusClass = 'tag-default';
+            if (item.status === '现行') statusClass = 'tag-success';
+            else if (item.status === '废止' || item.status === '有误') statusClass = 'tag-error';
+            else if (item.status === '简写') statusClass = 'tag-warning';
+            statusTag.className = 'tag ' + statusClass;
+            statusTag.textContent = item.status;
+            td.appendChild(statusTag);
+
+            td = tr.insertCell(-1);
+            td.style.whiteSpace = 'nowrap';
+            td.textContent = item.impl_date || '—';
+
+            td = tr.insertCell(-1);
+            var delBtn = document.createElement('button');
+            delBtn.className = 'del-btn';
+            delBtn.title = '删除';
+            delBtn.textContent = '×';
+            delBtn.onclick = function() { deleteRow(this); };
+            td.appendChild(delBtn);
+
+            tbody.appendChild(tr);
+
+            if ((item.name_correct === '是' && item.code_correct === '是' && (item.status === '现行' || item.status === '未标注')) ||
+                (item.is_replacement && item.status === '现行')) correctCount++;
+        });
+        document.getElementById('resultStats').textContent = '共 ' + totalCount + ' 条 · 正确且现行 ' + correctCount + ' 条';
+        document.getElementById('btnCopyAll').style.display = correctCount > 0 ? 'inline-flex' : 'none';
+        document.getElementById('btnFavResult').style.display = totalCount > 0 ? 'inline-flex' : 'none';
+        parsedItems = results.map(function(item) {
+            return { input_name: item.input_name || '', input_code: item.input_code || '' };
+        });
+    }
+
+    function addRow() {
+        collectEditedItems();
+        parsedItems.push({ input_name: '', input_code: '' });
+        renderEditable(parsedItems);
+        var inputs = document.querySelectorAll('.edit-name');
+        if (inputs.length > 0) inputs[inputs.length - 1].focus();
+    }
+
+    function deleteRow(btn) {
+        var tr = btn.closest('tr');
+        var idx = tr.rowIndex - 1;
+        collectEditedItems();
+        parsedItems.splice(idx, 1);
+        if (parsedItems.length > 0) { renderEditable(parsedItems); }
+        else { clearTable(); }
+    }
+
+    function copyText(el) {
+        var text = el.textContent;
+        if (text === '—') return;
+        navigator.clipboard.writeText(text);
+        showToast('已复制：' + text);
+    }
+
+    function toggleCopyMenu() {
+        document.getElementById('copyMenu').classList.toggle('active');
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#copyBtnWrap')) {
+            document.getElementById('copyMenu').classList.remove('active');
+        }
+    });
+
+    function copyAllCorrect(mode) {
+        document.getElementById('copyMenu').classList.remove('active');
+        var rows = document.getElementById('resultBody').querySelectorAll('tr');
+        var lines = [];
+        rows.forEach(function(tr) {
+            var cells = tr.querySelectorAll('td');
+            var nc = cells[5].textContent.trim(), cc = cells[6].textContent.trim(), st = cells[7].textContent.trim();
+            if ((nc === '是' && cc === '是' && (st === '现行' || st === '未标注')) ||
+                (nc === '是' && st === '现行' && cells[0].querySelector('.rep-mark'))) {
+                var mn = cells[3].textContent.trim(), mc = cells[4].textContent.trim();
+                if (mn !== '—' && mc !== '—') {
+                    if (mode === 'code_name') lines.push(mc + ' ' + mn);
+                    else if (mode === 'name_code') lines.push(mn + ' ' + mc);
+                    else if (mode === 'book_code') lines.push('《' + mn + '》' + mc);
+                    else if (mode === 'code_book') lines.push(mc + '《' + mn + '》');
+                } else if (mn !== '—') lines.push(mn);
+                else if (mc !== '—') lines.push(mc);
+            }
+        });
+        if (lines.length > 0) { navigator.clipboard.writeText(lines.join('\n')); showToast('已复制 ' + lines.length + ' 条正确规范'); }
+    }
+
+    function uploadExcel(input) {
+        if (!input.files.length) return;
+        var fd = new FormData();
+        fd.append('file', input.files[0]);
+        fetch('/api/upload', {method: 'POST', body: fd}).then(r => r.json()).then(function(data) {
+            showToast(data.message, !data.success);
+            if (data.success) { loadStatus(); loadDatabase(); }
+            else if (data.message === '请先输入管理员密码') showLoginModal();
+            input.value = '';
+        });
+    }
+
+    function showLoginModal() {
+        document.getElementById('loginModal').classList.add('active');
+        document.getElementById('adminPwd').value = '';
+        setTimeout(function() { document.getElementById('adminPwd').focus(); }, 100);
+    }
+
+    function hideLoginModal() {
+        document.getElementById('loginModal').classList.remove('active');
+    }
+
+    function doLogin() {
+        var pwd = document.getElementById('adminPwd').value;
+        if (!pwd) return;
+        fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: pwd})
+        }).then(r => r.json()).then(function(data) {
+            if (data.success) { hideLoginModal(); document.getElementById('uploadInput').click(); }
+            else { showToast(data.message, true); document.getElementById('adminPwd').value = ''; document.getElementById('adminPwd').focus(); }
+        });
+    }
+
+    function clearAll() {
+        document.getElementById('inputText').value = '';
+        parsedItems = [];
+        clearTable();
+    }
+
+    function clearTable() {
+        showLibSection();
+    }
+
+    function showToast(msg, isError) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast show' + (isError ? ' error' : '');
+        setTimeout(function() { t.className = 'toast'; }, 2200);
+    }
+
+    function escAttr(str) { return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ========== 收藏和标签功能 ==========
+    var FAV_KEY = 'spec_favorites';
+    var TAG_KEY = 'spec_tags';
+    var _tagModalFavId = null;   // 当前标签弹窗操作的收藏ID
+    var _tagModalSelected = [];  // 标签弹窗中已选标签
+    var _editFavId = null;       // 当前编辑的收藏ID
+    var _favSelectedIds = {};    // 收藏勾选状态 {id: true}
+    var _batchMode = 'add';     // 批量标签模式：add 或 remove
+
+    function getFavs() {
+        try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }
+        catch(e) { return []; }
+    }
+    function saveFavs(favs) { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }
+    function getAllTags() {
+        try { return JSON.parse(localStorage.getItem(TAG_KEY)) || []; }
+        catch(e) { return []; }
+    }
+    function saveAllTags(tags) { localStorage.setItem(TAG_KEY, JSON.stringify(tags)); }
+
+    // 显示/隐藏收藏面板
+    function showFavPanel() {
+        var panel = document.getElementById('favPanel');
+        if (panel.style.display === 'none') {
+            panel.style.display = 'block';
+            renderFavList();
+            updateFavTagFilter();
+        } else {
+            hideFavPanel();
+        }
+    }
+    function hideFavPanel() {
+        document.getElementById('favPanel').style.display = 'none';
+    }
+
+    // 更新标签筛选下拉框
+    function updateFavTagFilter() {
+        var tags = getAllTags();
+        var sel = document.getElementById('favTagFilter');
+        var curVal = sel.value;
+        sel.innerHTML = '<option value="">全部标签</option>';
+        tags.forEach(function(t) {
+            var opt = document.createElement('option');
+            opt.value = t; opt.textContent = t;
+            sel.appendChild(opt);
+        });
+        sel.value = curVal;
+    }
+
+    // 渲染收藏列表
+    function renderFavList() {
+        var favs = getFavs();
+        var tagFilter = document.getElementById('favTagFilter').value;
+        var list = document.getElementById('favList');
+
+        var filtered = favs;
+        if (tagFilter) {
+            filtered = favs.filter(function(f) { return f.tags && f.tags.indexOf(tagFilter) !== -1; });
+        }
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="fav-empty">' + (tagFilter ? '该标签下暂无收藏' : '暂无收藏，点击"添加"或"收藏结果"按钮添加') + '</div>';
+            updateBatchBar();
+            return;
+        }
+
+        var frag = document.createDocumentFragment();
+        filtered.forEach(function(fav) {
+            var item = document.createElement('div');
+            item.className = 'fav-item';
+            item.setAttribute('data-id', fav.id);
+
+            // 勾选框
+            var checkbox = document.createElement('div');
+            checkbox.className = 'fav-item-checkbox' + (_favSelectedIds[fav.id] ? ' checked' : '');
+            checkbox.innerHTML = _favSelectedIds[fav.id] ? '&#10003;' : '';
+            checkbox.onclick = function(e) {
+                e.stopPropagation();
+                toggleFavSelect(fav.id);
+            };
+            item.appendChild(checkbox);
+
+            var info = document.createElement('div');
+            info.className = 'fav-item-info';
+            info.onclick = function() { loadFavToInput(fav.id); };
+
+            var nameEl = document.createElement('div');
+            nameEl.className = 'fav-item-name';
+            nameEl.textContent = fav.name || '（无名称）';
+            info.appendChild(nameEl);
+
+            if (fav.code) {
+                var codeEl = document.createElement('div');
+                codeEl.className = 'fav-item-code';
+                codeEl.textContent = fav.code;
+                info.appendChild(codeEl);
+            }
+
+            if (fav.tags && fav.tags.length > 0) {
+                var tagsEl = document.createElement('div');
+                tagsEl.className = 'fav-item-tags';
+                fav.tags.forEach(function(t) {
+                    var tag = document.createElement('span');
+                    tag.className = 'fav-tag';
+                    tag.textContent = t;
+                    tagsEl.appendChild(tag);
+                });
+                info.appendChild(tagsEl);
+            }
+
+            item.appendChild(info);
+
+            // 操作按钮
+            var actions = document.createElement('div');
+            actions.className = 'fav-item-actions';
+
+            var tagBtn = document.createElement('button');
+            tagBtn.className = 'fav-action-btn';
+            tagBtn.title = '管理标签';
+            tagBtn.innerHTML = '&#x1F3F7;';
+            tagBtn.onclick = function(e) { e.stopPropagation(); showTagModal(fav.id); };
+            actions.appendChild(tagBtn);
+
+            var editBtn = document.createElement('button');
+            editBtn.className = 'fav-action-btn';
+            editBtn.title = '编辑';
+            editBtn.innerHTML = '&#x270E;';
+            editBtn.onclick = function(e) { e.stopPropagation(); showEditFavModal(fav.id); };
+            actions.appendChild(editBtn);
+
+            var delBtn = document.createElement('button');
+            delBtn.className = 'fav-action-btn danger';
+            delBtn.title = '删除';
+            delBtn.innerHTML = '&#x2715;';
+            delBtn.onclick = function(e) { e.stopPropagation(); deleteFavItem(fav.id); };
+            actions.appendChild(delBtn);
+
+            item.appendChild(actions);
+            frag.appendChild(item);
+        });
+        list.innerHTML = '';
+        list.appendChild(frag);
+        updateBatchBar();
+    }
+
+    // 勾选/取消勾选
+    function toggleFavSelect(id) {
+        if (_favSelectedIds[id]) { delete _favSelectedIds[id]; }
+        else { _favSelectedIds[id] = true; }
+        renderFavList();
+    }
+
+    // 全选/取消全选
+    function toggleFavSelectAll() {
+        var favs = getFavs();
+        var tagFilter = document.getElementById('favTagFilter').value;
+        var filtered = favs;
+        if (tagFilter) {
+            filtered = favs.filter(function(f) { return f.tags && f.tags.indexOf(tagFilter) !== -1; });
+        }
+        var allSelected = filtered.every(function(f) { return _favSelectedIds[f.id]; });
+        if (allSelected) {
+            filtered.forEach(function(f) { delete _favSelectedIds[f.id]; });
+        } else {
+            filtered.forEach(function(f) { _favSelectedIds[f.id] = true; });
+        }
+        renderFavList();
+    }
+
+    // 清除选择
+    function clearFavSelection() {
+        _favSelectedIds = {};
+        renderFavList();
+    }
+
+    // 获取选中的ID列表
+    function getSelectedFavIds() {
+        return Object.keys(_favSelectedIds).filter(function(id) { return _favSelectedIds[id]; });
+    }
+
+    // 更新批量操作栏
+    function updateBatchBar() {
+        var ids = getSelectedFavIds();
+        var bar = document.getElementById('favBatchBar');
+        if (ids.length > 0) {
+            bar.classList.add('active');
+            document.getElementById('favBatchInfo').textContent = '已选 ' + ids.length + ' 项';
+        } else {
+            bar.classList.remove('active');
+        }
+    }
+
+    // 批量打标签
+    function batchAddTag() {
+        var ids = getSelectedFavIds();
+        if (ids.length === 0) { showToast('请先选择收藏项', true); return; }
+        _batchMode = 'add';
+        _tagModalFavId = '__batch__';
+        _tagModalSelected = [];
+        document.getElementById('tagModalSubtitle').textContent = '批量添加标签（' + ids.length + ' 项）';
+        document.getElementById('tagModalItem').innerHTML = '';
+        renderTagExistingList();
+        document.getElementById('tagNewInput').value = '';
+        document.getElementById('tagModal').classList.add('active');
+    }
+
+    // 批量移除标签
+    function batchRemoveTag() {
+        var ids = getSelectedFavIds();
+        if (ids.length === 0) { showToast('请先选择收藏项', true); return; }
+        _batchMode = 'remove';
+        _tagModalFavId = '__batch__';
+        _tagModalSelected = [];
+        document.getElementById('tagModalSubtitle').textContent = '批量移除标签（' + ids.length + ' 项）';
+        document.getElementById('tagModalItem').innerHTML = '';
+        renderTagExistingList();
+        document.getElementById('tagNewInput').value = '';
+        document.getElementById('tagModal').classList.add('active');
+    }
+
+    // 批量删除
+    function batchDeleteFav() {
+        var ids = getSelectedFavIds();
+        if (ids.length === 0) { showToast('请先选择收藏项', true); return; }
+        var favs = getFavs();
+        favs = favs.filter(function(f) { return ids.indexOf(f.id) === -1; });
+        saveFavs(favs);
+        _favSelectedIds = {};
+        renderFavList();
+        updateFavTagFilter();
+        showToast('已删除 ' + ids.length + ' 项');
+    }
+
+    // 从面板底部输入框添加收藏
+    function addFavFromInput() {
+        var nameInput = document.getElementById('favAddName');
+        var codeInput = document.getElementById('favAddCode');
+        var name = nameInput.value.trim();
+        var code = codeInput.value.trim();
+        if (!name && !code) { showToast('请输入名称或编号', true); return; }
+
+        var favs = getFavs();
+        var fav = {
+            id: 'fav_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+            name: name,
+            code: code,
+            tags: [],
+            createdAt: new Date().toISOString()
+        };
+        favs.push(fav);
+        saveFavs(favs);
+        nameInput.value = '';
+        codeInput.value = '';
+        renderFavList();
+        updateFavTagFilter();
+        showToast('已添加到收藏');
+    }
+
+    // 从输入框内容保存到收藏
+    function saveInputToFav() {
+        var text = document.getElementById('inputText').value.trim();
+        if (!text) { showToast('请先输入规范内容', true); return; }
+
+        // 解析每行
+        var lines = text.split('\n').filter(function(l) { return l.trim(); });
+        var favs = getFavs();
+        var added = 0;
+        lines.forEach(function(line) {
+            line = line.trim();
+            if (!line) return;
+            // 简单解析：尝试提取编号
+            var parsed = parseLineSimple(line);
+            var fav = {
+                id: 'fav_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                name: parsed.name,
+                code: parsed.code,
+                tags: [],
+                createdAt: new Date().toISOString()
+            };
+            favs.push(fav);
+            added++;
+        });
+        saveFavs(favs);
+        renderFavList();
+        updateFavTagFilter();
+        showToast('已收藏 ' + added + ' 条');
+    }
+
+    // 简单解析行（前端用，与后端_parse_line逻辑类似）
+    function parseLineSimple(line) {
+        line = line.replace(/\t/g, ' ').trim();
+        // 去除书名号
+        line = line.replace(/[《〈]/g, '').replace(/[》〉]/g, '');
+        var patterns = [
+            /[\u4e00-\u9fff]{1,6}[\[【]\d{4}[\]】]\s*\d+号?/,
+            /\d{2}[A-Z]{1,3}\d{2,3}[\-—–]?\d*/,
+            /[A-Z]{1,4}\/?T?\s*\d{1,5}[\-—–]\d{2,4}/,
+            /DBJ\/?T?\s*\d{1,3}[\-—–]\d{1,4}/,
+            /[A-Z]{1,4}\/?T?\s*\d{3,6}/
+        ];
+        var code = '', name = '';
+        for (var i = 0; i < patterns.length; i++) {
+            var match = line.match(patterns[i]);
+            if (match) {
+                code = match[0].trim();
+                name = line.substring(0, match.index) + line.substring(match.index + match[0].length);
+                name = name.replace(/^[\s,，、：:]+/, '').replace(/[\s,，、：:]+$/, '');
+                break;
+            }
+        }
+        if (!code) name = line;
+        return { name: name, code: code };
+    }
+
+    // 从对比结果保存到收藏
+    function saveResultToFav() {
+        var rows = document.getElementById('resultBody').querySelectorAll('tr');
+        var favs = getFavs();
+        var added = 0;
+        rows.forEach(function(tr) {
+            var cells = tr.querySelectorAll('td');
+            if (cells.length < 5) return;
+            var name = cells[1].querySelector('.edit-name');
+            var code = cells[2].querySelector('.edit-code');
+            var matchName = cells[3].textContent.trim();
+            var matchCode = cells[4].textContent.trim();
+            var n = (name ? name.value.trim() : '') || matchName;
+            var c = (code ? code.value.trim() : '') || matchCode;
+            if (!n && !c) return;
+            // 检查是否已存在
+            var exists = favs.some(function(f) { return f.name === n && f.code === c; });
+            if (!exists) {
+                favs.push({
+                    id: 'fav_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6) + added,
+                    name: n, code: c, tags: [], createdAt: new Date().toISOString()
+                });
+                added++;
+            }
+        });
+        saveFavs(favs);
+        renderFavList();
+        updateFavTagFilter();
+        showToast('已收藏 ' + added + ' 条结果');
+    }
+
+    // 删除收藏
+    function deleteFavItem(id) {
+        var favs = getFavs();
+        favs = favs.filter(function(f) { return f.id !== id; });
+        saveFavs(favs);
+        renderFavList();
+        updateFavTagFilter();
+        showToast('已删除');
+    }
+
+    // 加载收藏到输入框
+    function loadFavToInput(id) {
+        var favs = getFavs();
+        var fav = favs.find(function(f) { return f.id === id; });
+        if (!fav) return;
+        var textarea = document.getElementById('inputText');
+        var line = (fav.code ? fav.code + ' ' : '') + fav.name;
+        if (textarea.value.trim()) {
+            textarea.value += '\n' + line;
+        } else {
+            textarea.value = line;
+        }
+        showToast('已添加到输入框：' + (fav.name || fav.code));
+    }
+
+    // 按标签加载收藏到输入框
+    function loadFavByTag(tag) {
+        var favs = getFavs();
+        var filtered = tag ? favs.filter(function(f) { return f.tags && f.tags.indexOf(tag) !== -1; }) : favs;
+        if (filtered.length === 0) { showToast('该标签下无收藏', true); return; }
+        var textarea = document.getElementById('inputText');
+        var lines = filtered.map(function(f) { return (f.code ? f.code + ' ' : '') + f.name; });
+        textarea.value = lines.join('\n');
+        showToast('已加载 ' + filtered.length + ' 条收藏到输入框');
+    }
+
+    // 标签弹窗
+    function showTagModal(favId) {
+        _tagModalFavId = favId;
+        var favs = getFavs();
+        var fav = favs.find(function(f) { return f.id === favId; });
+        if (!fav) return;
+
+        _tagModalSelected = (fav.tags || []).slice();
+        document.getElementById('tagModalSubtitle').textContent = (fav.name || fav.code || '').substring(0, 30);
+        document.getElementById('tagModalItem').innerHTML = '<code>' + escAttr(fav.name || '') + '</code> <code>' + escAttr(fav.code || '') + '</code>';
+
+        renderTagExistingList();
+        document.getElementById('tagNewInput').value = '';
+        document.getElementById('tagModal').classList.add('active');
+    }
+
+    function renderTagExistingList() {
+        var allTags = getAllTags();
+        var container = document.getElementById('tagExistingList');
+        container.innerHTML = '';
+        if (allTags.length === 0) {
+            container.innerHTML = '<span style="font-size:12px;color:var(--text-secondary);">暂无标签，请在下方输入新标签</span>';
+            return;
+        }
+        allTags.forEach(function(t) {
+            var item = document.createElement('span');
+            var isSelected = _tagModalSelected.indexOf(t) !== -1;
+            item.className = 'tag-existing-item ' + (isSelected ? 'selected' : 'unselected');
+            item.textContent = t;
+            item.onclick = function() {
+                var idx = _tagModalSelected.indexOf(t);
+                if (idx !== -1) { _tagModalSelected.splice(idx, 1); }
+                else { _tagModalSelected.push(t); }
+                renderTagExistingList();
+            };
+            container.appendChild(item);
+        });
+    }
+
+    function addNewTag() {
+        var input = document.getElementById('tagNewInput');
+        var tag = input.value.trim();
+        if (!tag) return;
+        // 添加到全局标签
+        var allTags = getAllTags();
+        if (allTags.indexOf(tag) === -1) {
+            allTags.push(tag);
+            saveAllTags(allTags);
+        }
+        // 添加到选中
+        if (_tagModalSelected.indexOf(tag) === -1) {
+            _tagModalSelected.push(tag);
+        }
+        input.value = '';
+        renderTagExistingList();
+    }
+
+    function hideTagModal() {
+        document.getElementById('tagModal').classList.remove('active');
+        _tagModalFavId = null;
+    }
+
+    function saveTagModal() {
+        if (!_tagModalFavId) return;
+        var favs = getFavs();
+
+        if (_tagModalFavId === '__batch__') {
+            // 批量模式
+            var ids = getSelectedFavIds();
+            if (_batchMode === 'add') {
+                // 批量添加标签
+                favs.forEach(function(fav) {
+                    if (ids.indexOf(fav.id) !== -1) {
+                        if (!fav.tags) fav.tags = [];
+                        _tagModalSelected.forEach(function(t) {
+                            if (fav.tags.indexOf(t) === -1) fav.tags.push(t);
+                        });
+                    }
+                });
+            } else {
+                // 批量移除标签
+                favs.forEach(function(fav) {
+                    if (ids.indexOf(fav.id) !== -1 && fav.tags) {
+                        fav.tags = fav.tags.filter(function(t) { return _tagModalSelected.indexOf(t) === -1; });
+                    }
+                });
+            }
+            saveFavs(favs);
+        } else {
+            // 单条模式
+            var fav = favs.find(function(f) { return f.id === _tagModalFavId; });
+            if (fav) {
+                fav.tags = _tagModalSelected.slice();
+                saveFavs(favs);
+            }
+        }
+        hideTagModal();
+        renderFavList();
+        updateFavTagFilter();
+        showToast('标签已保存');
+    }
+
+    // 编辑收藏弹窗
+    function showEditFavModal(favId) {
+        _editFavId = favId;
+        var favs = getFavs();
+        var fav = favs.find(function(f) { return f.id === favId; });
+        if (!fav) return;
+        document.getElementById('editFavName').value = fav.name || '';
+        document.getElementById('editFavCode').value = fav.code || '';
+        document.getElementById('editFavModal').classList.add('active');
+    }
+
+    function hideEditFavModal() {
+        document.getElementById('editFavModal').classList.remove('active');
+        _editFavId = null;
+    }
+
+    function saveEditFav() {
+        if (!_editFavId) return;
+        var favs = getFavs();
+        var fav = favs.find(function(f) { return f.id === _editFavId; });
+        if (fav) {
+            fav.name = document.getElementById('editFavName').value.trim();
+            fav.code = document.getElementById('editFavCode').value.trim();
+            saveFavs(favs);
+        }
+        hideEditFavModal();
+        renderFavList();
+        showToast('已保存修改');
+    }
+
+    // 修改收藏按钮行为：如果面板已展开则收起，否则保存输入框内容到收藏
+    document.getElementById('btnFav').onclick = function() {
+        var panel = document.getElementById('favPanel');
+        if (panel.style.display !== 'none') {
+            hideFavPanel();
+        } else {
+            // 如果输入框有内容，保存到收藏
+            var text = document.getElementById('inputText').value.trim();
+            if (text) {
+                saveInputToFav();
+            }
+            panel.style.display = 'block';
+            renderFavList();
+            updateFavTagFilter();
+        }
+    };
+
+    // ========== 反馈功能 ==========
+    var FB_KEY = 'spec_feedbacks';
+    var _fbTab = 'submit';
+
+    function getFeedbacks() {
+        try { return JSON.parse(localStorage.getItem(FB_KEY)) || []; }
+        catch(e) { return []; }
+    }
+    function saveFeedbacks(fbs) { localStorage.setItem(FB_KEY, JSON.stringify(fbs)); }
+
+    var FB_TYPE_MAP = { missing: '规范缺失', error: '数据错误', suggest: '功能建议', other: '其他' };
+
+    function showFeedbackModal() {
+        document.getElementById('feedbackModal').classList.add('active');
+        switchFbTab('submit');
+    }
+    function hideFeedbackModal() {
+        document.getElementById('feedbackModal').classList.remove('active');
+    }
+
+    function switchFbTab(tab) {
+        _fbTab = tab;
+        var tabs = document.querySelectorAll('.feedback-tab');
+        tabs[0].className = 'feedback-tab' + (tab === 'submit' ? ' active' : '');
+        tabs[1].className = 'feedback-tab' + (tab === 'list' ? ' active' : '');
+        document.getElementById('fbFormWrap').className = 'feedback-form' + (tab === 'submit' ? '' : ' hidden');
+        document.getElementById('fbListWrap').className = 'feedback-list-wrap' + (tab === 'list' ? ' active' : '');
+        if (tab === 'list') renderFbList();
+    }
+
+    function submitFeedback() {
+        var type = document.getElementById('fbType').value;
+        var refName = document.getElementById('fbRefName').value.trim();
+        var refCode = document.getElementById('fbRefCode').value.trim();
+        var content = document.getElementById('fbContent').value.trim();
+        if (!content) { showToast('请填写详细描述', true); return; }
+
+        var fbs = getFeedbacks();
+        fbs.unshift({
+            id: 'fb_' + Date.now(),
+            type: type,
+            refName: refName,
+            refCode: refCode,
+            content: content,
+            status: 'open',
+            createdAt: new Date().toISOString()
+        });
+        saveFeedbacks(fbs);
+        document.getElementById('fbContent').value = '';
+        document.getElementById('fbRefName').value = '';
+        document.getElementById('fbRefCode').value = '';
+        showToast('反馈已提交');
+        switchFbTab('list');
+    }
+
+    function renderFbList() {
+        var fbs = getFeedbacks();
+        var list = document.getElementById('fbList');
+        if (fbs.length === 0) {
+            list.innerHTML = '<div class="fb-empty">暂无反馈记录</div>';
+            return;
+        }
+        var frag = document.createDocumentFragment();
+        fbs.forEach(function(fb) {
+            var item = document.createElement('div');
+            item.className = 'fb-item';
+
+            var header = document.createElement('div');
+            header.className = 'fb-item-header';
+
+            var typeTag = document.createElement('span');
+            typeTag.className = 'fb-item-type ' + fb.type;
+            typeTag.textContent = FB_TYPE_MAP[fb.type] || fb.type;
+            header.appendChild(typeTag);
+
+            var time = document.createElement('span');
+            time.className = 'fb-item-time';
+            time.textContent = fb.createdAt ? fb.createdAt.substring(0, 16).replace('T', ' ') : '';
+            header.appendChild(time);
+
+            item.appendChild(header);
+
+            if (fb.refName || fb.refCode) {
+                var ref = document.createElement('div');
+                ref.className = 'fb-item-ref';
+                ref.textContent = (fb.refName || '') + (fb.refCode ? ' ' + fb.refCode : '');
+                item.appendChild(ref);
+            }
+
+            var contentEl = document.createElement('div');
+            contentEl.className = 'fb-item-content';
+            contentEl.textContent = fb.content;
+            item.appendChild(contentEl);
+
+            var actions = document.createElement('div');
+            actions.className = 'fb-item-actions';
+
+            var resolveBtn = document.createElement('button');
+            if (fb.status === 'open') {
+                resolveBtn.textContent = '标记已解决';
+                resolveBtn.onclick = function() { resolveFb(fb.id); };
+            } else {
+                resolveBtn.textContent = '重新打开';
+                resolveBtn.onclick = function() { reopenFb(fb.id); };
+            }
+            actions.appendChild(resolveBtn);
+
+            var copyBtn = document.createElement('button');
+            copyBtn.textContent = '复制';
+            copyBtn.onclick = function() {
+                var text = '[' + (FB_TYPE_MAP[fb.type] || fb.type) + ']';
+                if (fb.refName || fb.refCode) text += ' ' + (fb.refName || '') + ' ' + (fb.refCode || '');
+                text += '\n' + fb.content;
+                navigator.clipboard.writeText(text.trim());
+                showToast('已复制');
+            };
+            actions.appendChild(copyBtn);
+
+            var delBtn = document.createElement('button');
+            delBtn.className = 'danger';
+            delBtn.textContent = '删除';
+            delBtn.onclick = function() { deleteFb(fb.id); };
+            actions.appendChild(delBtn);
+
+            item.appendChild(actions);
+            frag.appendChild(item);
+        });
+        list.innerHTML = '';
+        list.appendChild(frag);
+    }
+
+    function resolveFb(id) {
+        var fbs = getFeedbacks();
+        var fb = fbs.find(function(f) { return f.id === id; });
+        if (fb) { fb.status = 'resolved'; saveFeedbacks(fbs); renderFbList(); }
+    }
+    function reopenFb(id) {
+        var fbs = getFeedbacks();
+        var fb = fbs.find(function(f) { return f.id === id; });
+        if (fb) { fb.status = 'open'; saveFeedbacks(fbs); renderFbList(); }
+    }
+    function deleteFb(id) {
+        var fbs = getFeedbacks();
+        fbs = fbs.filter(function(f) { return f.id !== id; });
+        saveFeedbacks(fbs);
+        renderFbList();
+        showToast('已删除');
+    }
+
+    function exportFeedback() {
+        var fbs = getFeedbacks();
+        if (fbs.length === 0) { showToast('暂无反馈记录', true); return; }
+        var lines = ['建筑规范查询对比工具 - 反馈记录', '导出时间：' + new Date().toLocaleString(), ''];
+        fbs.forEach(function(fb) {
+            lines.push('【' + (FB_TYPE_MAP[fb.type] || fb.type) + '】' + (fb.status === 'resolved' ? ' [已解决]' : ' [待处理]'));
+            if (fb.refName || fb.refCode) lines.push('关联规范：' + (fb.refName || '') + ' ' + (fb.refCode || ''));
+            lines.push('描述：' + fb.content);
+            lines.push('时间：' + (fb.createdAt ? fb.createdAt.substring(0, 16).replace('T', ' ') : ''));
+            lines.push('---');
+        });
+        var text = lines.join('\n');
+        navigator.clipboard.writeText(text);
+        showToast('反馈记录已复制到剪贴板');
+    }
+</script>
+</body>
+</html>

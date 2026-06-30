@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+data/
+*.exe
+build/
+dist/
+*.spec
+backup/
+v1_local/
+.trae/
+test_*.py
+publish.py
+templates/database.html
+*.jpg
+*.png
+git-setup.exe
